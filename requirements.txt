@@ -1,4 +1,3 @@
-# Core dependencies
 streamlit==1.35.0
 yfinance==0.2.54
 SpeechRecognition==3.10.1
@@ -9,19 +8,4 @@ pandas==2.2.2
 numpy==1.26.4
 requests==2.32.3
 python-dotenv==1.0.1
-pydub==0.25.1
-pytz==2024.1  # Compatible version
-
-# Platform-specific dependencies
-pywin32==306; sys_platform == 'win32'
-pyttsx3==2.90; sys_platform == 'linux' or sys_platform == 'darwin'
-
-# Audio processing
-pyaudio==0.2.14
-
-# Additional required dependencies
-protobuf==4.25.3
-markdown-it-py==3.0.0
-python-dateutil==2.9.0
-pyopenssl==24.1.0
-charset-normalizer==3.3.2
+joblib==1.2.0
