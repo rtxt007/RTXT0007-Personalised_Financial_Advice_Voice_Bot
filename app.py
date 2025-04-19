@@ -9,8 +9,14 @@ import tempfile
 import joblib
 import streamlit as st
 from gtts import gTTS
-
 from tensorflow.keras.models import load_model
+
+# ——— STREAMLIT CONFIGURATION ———
+# Must be called once and before any other Streamlit commands
+st.set_page_config(
+    page_title="💰 Financial AI Assistant",
+    layout="wide"
+)
 
 # ========== 1. Load Pretrained Model ==========
 @st.cache_resource
@@ -75,7 +81,6 @@ def get_crypto_price(crypto_name, currency="usd"):
     crypto_id = CRYPTO_NAME_TO_ID.get(crypto_name.strip().title())
     if not crypto_id:
         return {"error": f"Cryptocurrency '{crypto_name}' not found."}
-    
     url = "https://api.coingecko.com/api/v3/simple/price"
     params = {"ids": crypto_id, "vs_currencies": currency}
     response = requests.get(url, params=params)
@@ -88,7 +93,7 @@ def get_macro_data(country_code, indicator_code):
     return data[1][0] if data and len(data) > 1 else {"error": "No data found"}
 
 def fetch_financial_news(query="stock market", language="en", page_size=5):
-    NEWS_API_KEY = st.secrets["NEWS_API_KEY"]  # Use Streamlit secrets
+    NEWS_API_KEY = st.secrets["NEWS_API_KEY"]
     url = "https://newsapi.org/v2/everything"
     params = {
         "q": query,
@@ -103,7 +108,6 @@ def get_stock_data(company_name):
     symbol = COMPANY_TO_TICKER.get(company_name.strip().title())
     if not symbol:
         return {"error": "Invalid company name."}
-    
     stock = yf.Ticker(symbol)
     df = stock.history(period="1mo")
     df.index = df.index.strftime('%Y-%m-%d')
@@ -118,59 +122,36 @@ def aggregate_data(crypto_name, country, news_query, company_name):
     }
 
 # ========== AI Advice Generation ==========
-# def get_financial_advice(aggregated_data):
-#     api_key = st.secrets["GEMINI_API_KEY"]  # Use Streamlit secrets
-#     gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
-    
-#     prompt = f"""You are a seasoned financial advisor with deep expertise in wealth management. 
-#     Provide actionable advice based on this data: {json.dumps(aggregated_data, indent=2)}
-#     Focus on clarity and tangible steps. Keep under 275 words."""
-    
-#     response = requests.post(gemini_api_url, json={"contents": [{"parts": [{"text": prompt}]}])
-#     return response.json()['candidates'][0]['content']['parts'][0]['text']
-
-
-
 def get_financial_advice(aggregated_data):
-    # Pull your API key from Streamlit secrets
     api_key = st.secrets["GEMINI_API_KEY"]
     gemini_api_url = (
         f"https://generativelanguage.googleapis.com"
         f"/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
     )
 
-    
     prompt = (
         "You are a seasoned financial advisor with deep expertise in wealth management.\n"
         f"Provide actionable advice based on this data: {json.dumps(aggregated_data, indent=2)}\n"
         "Focus on clarity and tangible steps. Keep under 275 words."
     )
 
-    # Properly matched braces/brackets here
     payload = {
         "contents": [
-            {
-                "parts": [
-                    {"text": prompt}
-                ]
-            }
+            {"parts": [{"text": prompt}]}  
         ]
     }
 
-    # Send the request and handle errors
     response = requests.post(gemini_api_url, json=payload)
     response.raise_for_status()
-
-    # Extract and return the advice text
     candidates = response.json().get("candidates", [])
     if not candidates:
         raise ValueError("No response candidates returned from Gemini API.")
     return candidates[0]["content"]["parts"][0]["text"]
+
 # ========== Core Application Logic ==========
 def classify_intent(user_text):
     if not user_text:
         return "Unknown"
-    
     X = vectorizer.transform([user_text])
     pred = model.predict(X)
     return label_encoder.inverse_transform(np.argmax(pred, axis=1))[0]
@@ -182,11 +163,9 @@ def generate_speech_file(text):
         return f.name
 
 # ========== Streamlit UI ==========
-st.set_page_config(page_title="💰 Financial AI Assistant", layout="wide")
 st.title("💰 Real-Time Financial AI Assistant")
 st.markdown("Type or speak your question about stocks, crypto, or macroeconomics")
 
-# Session state initialization
 if 'processed' not in st.session_state:
     st.session_state.update({
         'processed': False,
@@ -197,16 +176,13 @@ if 'processed' not in st.session_state:
         'audio_path': None
     })
 
-# Input handling
 with st.container():
     use_speech = st.checkbox("Use Speech Input 🎤")
-    audio_file = st.file_uploader("Upload audio", type=["wav", "mp3"], 
-                                disabled=not use_speech)
+    audio_file = st.file_uploader("Upload audio", type=["wav", "mp3"], disabled=not use_speech)
     text_input = st.text_area("Or type your query", height=100, disabled=use_speech)
 
 if st.button("Get Financial Advice 💡"):
     input_text = ""
-    
     if use_speech and audio_file:
         with tempfile.NamedTemporaryFile(suffix=".wav") as tmp:
             tmp.write(audio_file.getvalue())
@@ -218,15 +194,12 @@ if st.button("Get Financial Advice 💡"):
                 st.error(f"Speech recognition error: {str(e)}")
     elif text_input:
         input_text = text_input.strip()
-    
+
     if input_text:
-        # Process pipeline
         intent = classify_intent(input_text)
         entities = extract_entities(input_text)
         data = aggregate_data(**entities)
         advice = get_financial_advice(data)
-        
-        # Update session state
         st.session_state.update({
             'processed': True,
             'input_text': input_text,
@@ -236,7 +209,6 @@ if st.button("Get Financial Advice 💡"):
             'audio_path': generate_speech_file(advice)
         })
 
-# Display results
 if st.session_state.processed:
     st.divider()
     with st.expander("Analysis", expanded=True):
@@ -244,10 +216,8 @@ if st.session_state.processed:
         cols[0].write(f"**Input:**\n{st.session_state.input_text}")
         cols[0].write(f"**Intent:**\n{st.session_state.intent}")
         cols[1].json(st.session_state.data)
-    
     st.divider()
     st.subheader("AI Financial Advice")
     st.write(st.session_state.advice)
-    
     if st.session_state.audio_path:
         st.audio(st.session_state.audio_path, format="audio/mp3")
