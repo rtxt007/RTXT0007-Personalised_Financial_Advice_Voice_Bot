@@ -118,17 +118,54 @@ def aggregate_data(crypto_name, country, news_query, company_name):
     }
 
 # ========== AI Advice Generation ==========
-def get_financial_advice(aggregated_data):
-    api_key = st.secrets["GEMINI_API_KEY"]  # Use Streamlit secrets
-    gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+# def get_financial_advice(aggregated_data):
+#     api_key = st.secrets["GEMINI_API_KEY"]  # Use Streamlit secrets
+#     gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
     
-    prompt = f"""You are a seasoned financial advisor with deep expertise in wealth management. 
-    Provide actionable advice based on this data: {json.dumps(aggregated_data, indent=2)}
-    Focus on clarity and tangible steps. Keep under 275 words."""
+#     prompt = f"""You are a seasoned financial advisor with deep expertise in wealth management. 
+#     Provide actionable advice based on this data: {json.dumps(aggregated_data, indent=2)}
+#     Focus on clarity and tangible steps. Keep under 275 words."""
     
-    response = requests.post(gemini_api_url, json={"contents": [{"parts": [{"text": prompt}]}])
-    return response.json()['candidates'][0]['content']['parts'][0]['text']
+#     response = requests.post(gemini_api_url, json={"contents": [{"parts": [{"text": prompt}]}])
+#     return response.json()['candidates'][0]['content']['parts'][0]['text']
 
+
+
+def get_financial_advice(aggregated_data):
+    # Pull your API key from Streamlit secrets
+    api_key = st.secrets["GEMINI_API_KEY"]
+    gemini_api_url = (
+        f"https://generativelanguage.googleapis.com"
+        f"/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+    )
+
+    
+    prompt = (
+        "You are a seasoned financial advisor with deep expertise in wealth management.\n"
+        f"Provide actionable advice based on this data: {json.dumps(aggregated_data, indent=2)}\n"
+        "Focus on clarity and tangible steps. Keep under 275 words."
+    )
+
+    # Properly matched braces/brackets here
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": prompt}
+                ]
+            }
+        ]
+    }
+
+    # Send the request and handle errors
+    response = requests.post(gemini_api_url, json=payload)
+    response.raise_for_status()
+
+    # Extract and return the advice text
+    candidates = response.json().get("candidates", [])
+    if not candidates:
+        raise ValueError("No response candidates returned from Gemini API.")
+    return candidates[0]["content"]["parts"][0]["text"]
 # ========== Core Application Logic ==========
 def classify_intent(user_text):
     if not user_text:
