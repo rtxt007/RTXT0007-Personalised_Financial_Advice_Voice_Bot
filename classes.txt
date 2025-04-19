@@ -1,5 +1,0 @@
-general_query
-get_crypto_price
-get_financial_news
-get_macro_data
-get_stock_data
