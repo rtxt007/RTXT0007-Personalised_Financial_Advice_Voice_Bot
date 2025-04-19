@@ -9,6 +9,8 @@ import pyttsx3
 import tempfile
 import joblib
 import streamlit as st
+from gtts import gTTS
+import tempfile
 
 from tensorflow.keras.models import load_model
 
@@ -153,12 +155,10 @@ def classify_intent(user_text):
 
 # ========== 6. Text-to-Speech ==========
 def generate_speech_file(text):
-    engine = pyttsx3.init()
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
-        path = f.name
-    engine.save_to_file(text, path)
-    engine.runAndWait()
-    return path
+        tts = gTTS(text=text, lang='en')
+        tts.save(f.name)
+        return f.name
 
 
 # ========== Streamlit Interface ==========
